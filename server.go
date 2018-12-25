@@ -442,6 +442,7 @@ func runUDPLatencyServer(test *ethrTest) error {
 			go runUDPLatencyHandler(test, l)
 		}
 		<-test.done
+		ui.printMsg("Latency server is terminating.")
 	}(l)
 	return nil
 }
@@ -455,6 +456,7 @@ func runUDPLatencyHandler(test *ethrTest, conn *net.UDPConn) {
 	rttCount := test.testParam.RttCount
 	latencyNumbers := make([]time.Duration, rttCount)
 	for {
+		ui.printMsg("Waiting to receive UDP packet")
 		//
 		// TODO: This code is missing handling for unsolicited UDP trffic.
 		// Please look into bandwidth & PPS handling for examples.

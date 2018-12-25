@@ -403,6 +403,10 @@ func runUDPLatencyTest(test *ethrTest) {
 		ui.printErr("Error dialing the latency connection: %v", err)
 		return
 	}
+	rserver, rport, _ := net.SplitHostPort(conn.RemoteAddr().String())
+	lserver, lport, _ := net.SplitHostPort(conn.LocalAddr().String())
+	ui.printMsg("[udp] local %s port %s connected to %s port %s",
+		lserver, lport, rserver, rport)
 	defer conn.Close()
 	buffSize := test.testParam.BufferSize
 	// TODO Override buffer size to 1 for now. Evaluate if we need to allow
@@ -435,8 +439,8 @@ ExitForLoop:
 					// return
 					break ExitSelect
 				}
-				_, err = io.ReadFull(conn, buff)
-				//_, err = conn.Read(buff)
+				//_, err = io.ReadFull(conn, buff)
+				_, err = conn.Read(buff)
 				if err != nil {
 					// ui.printErr(err)
 					// return
