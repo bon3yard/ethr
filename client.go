@@ -416,6 +416,7 @@ func runUDPLatencyTest(test *ethrTest) {
 	for i := uint32(0); i < buffSize; i++ {
 		buff[i] = byte(i)
 	}
+	time.Sleep(time.Second)
 	blen := len(buff)
 	rttCount := test.testParam.RttCount
 	latencyNumbers := make([]time.Duration, rttCount)
