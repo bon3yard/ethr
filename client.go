@@ -232,84 +232,6 @@ func runTCPCpsTest(test *ethrTest) {
 	}
 }
 
-func runUDPBandwidthTest(test *ethrTest) {
-	server := test.session.remoteAddr
-	for th := uint32(0); th < test.testParam.NumThreads; th++ {
-		go func() {
-			buff := make([]byte, test.testParam.BufferSize)
-			conn, err := net.Dial(protoUDP, server+":"+udpBandwidthPort)
-			if err != nil {
-				ui.printDbg("Unable to dial UDP, error: %v", err)
-				return
-			}
-			defer conn.Close()
-			ec := test.newConn(conn)
-			rserver, rport, _ := net.SplitHostPort(conn.RemoteAddr().String())
-			lserver, lport, _ := net.SplitHostPort(conn.LocalAddr().String())
-			ui.printMsg("[%3d] local %s port %s connected to %s port %s",
-				ec.fd, lserver, lport, rserver, rport)
-			blen := len(buff)
-		ExitForLoop:
-			for {
-				select {
-				case <-test.done:
-					break ExitForLoop
-				default:
-					n, err := conn.Write(buff)
-					if err != nil {
-						ui.printDbg("%v", err)
-						continue
-					}
-					if n < blen {
-						ui.printDbg("Partial write: %d", n)
-						continue
-					}
-					atomic.AddUint64(&ec.data, uint64(n))
-					atomic.AddUint64(&test.testResult.data, uint64(n))
-				}
-			}
-		}()
-	}
-}
-
-func runUDPPpsTest(test *ethrTest) {
-	server := test.session.remoteAddr
-	for th := uint32(0); th < test.testParam.NumThreads; th++ {
-		go func() {
-			buff := make([]byte, test.testParam.BufferSize)
-			conn, err := net.Dial(protoUDP, server+":"+udpPpsPort)
-			if err != nil {
-				ui.printDbg("Unable to dial UDP, error: %v", err)
-				return
-			}
-			defer conn.Close()
-			rserver, rport, _ := net.SplitHostPort(conn.RemoteAddr().String())
-			lserver, lport, _ := net.SplitHostPort(conn.LocalAddr().String())
-			ui.printMsg("[udp] local %s port %s connected to %s port %s",
-				lserver, lport, rserver, rport)
-			blen := len(buff)
-		ExitForLoop:
-			for {
-				select {
-				case <-test.done:
-					break ExitForLoop
-				default:
-					n, err := conn.Write(buff)
-					if err != nil {
-						ui.printDbg("%v", err)
-						continue
-					}
-					if n < blen {
-						ui.printDbg("Partial write: %d", n)
-						continue
-					}
-					atomic.AddUint64(&test.testResult.data, 1)
-				}
-			}
-		}()
-	}
-}
-
 func runTCPLatencyTest(test *ethrTest) {
 	server := test.session.remoteAddr
 	conn, err := net.Dial(protoTCP, server+":"+tcpLatencyPort)
@@ -393,6 +315,91 @@ ExitForLoop:
 				protoToString(test.testParam.TestID.Protocol),
 				avg, min, max, p50, p90, p95, p99, p999, p9999)
 		}
+	}
+}
+
+func runUDPBandwidthTest(test *ethrTest) {
+	server := test.session.remoteAddr
+	for th := uint32(0); th < test.testParam.NumThreads; th++ {
+		go func() {
+			raddr, err := net.ResolveUDPAddr(protoUDP, server+":"+udpBandwidthPort)
+			buff := make([]byte, test.testParam.BufferSize)
+			conn, err := net.DialUDP(protoUDP, nil, raddr)
+			if err != nil {
+				ui.printDbg("Unable to dial UDP, error: %v", err)
+				return
+			}
+			defer conn.Close()
+			ec := test.newConn(conn)
+			rserver, rport, _ := net.SplitHostPort(conn.RemoteAddr().String())
+			lserver, lport, _ := net.SplitHostPort(conn.LocalAddr().String())
+			ui.printMsg("[%3d] local %s port %s connected to %s port %s",
+				ec.fd, lserver, lport, rserver, rport)
+			ethrMsg := createBgnMsg(lport)
+			err = sendSessionMsg(test.enc, ethrMsg)
+			if err != nil {
+				ui.printErr("Failed to send control channel message: %v, error: %v", ethrMsg, err)
+				return
+			}
+			blen := len(buff)
+		ExitForLoop:
+			for {
+				select {
+				case <-test.done:
+					break ExitForLoop
+				default:
+					n, err := conn.Write(buff)
+					if err != nil {
+						ui.printDbg("%v", err)
+						continue
+					}
+					if n < blen {
+						ui.printDbg("Partial write: %d", n)
+						continue
+					}
+					atomic.AddUint64(&ec.data, uint64(n))
+					atomic.AddUint64(&test.testResult.data, uint64(n))
+				}
+			}
+		}()
+	}
+}
+
+func runUDPPpsTest(test *ethrTest) {
+	server := test.session.remoteAddr
+	for th := uint32(0); th < test.testParam.NumThreads; th++ {
+		go func() {
+			buff := make([]byte, test.testParam.BufferSize)
+			conn, err := net.Dial(protoUDP, server+":"+udpPpsPort)
+			if err != nil {
+				ui.printDbg("Unable to dial UDP, error: %v", err)
+				return
+			}
+			defer conn.Close()
+			rserver, rport, _ := net.SplitHostPort(conn.RemoteAddr().String())
+			lserver, lport, _ := net.SplitHostPort(conn.LocalAddr().String())
+			ui.printMsg("[udp] local %s port %s connected to %s port %s",
+				lserver, lport, rserver, rport)
+			blen := len(buff)
+		ExitForLoop:
+			for {
+				select {
+				case <-test.done:
+					break ExitForLoop
+				default:
+					n, err := conn.Write(buff)
+					if err != nil {
+						ui.printDbg("%v", err)
+						continue
+					}
+					if n < blen {
+						ui.printDbg("Partial write: %d", n)
+						continue
+					}
+					atomic.AddUint64(&test.testResult.data, 1)
+				}
+			}
+		}()
 	}
 }
 

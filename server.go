@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"sort"
 	"sync/atomic"
+	"syscall"
 	"time"
 )
 
@@ -323,49 +324,70 @@ func runTCPLatencyHandler(conn net.Conn, test *ethrTest) {
 }
 
 func runUDPBandwidthServer(test *ethrTest) error {
-	udpAddr, err := net.ResolveUDPAddr(protoUDP, hostAddr+":"+udpBandwidthPort)
+	server := test.session.remoteAddr
+	server = ""
+	ludpAddr, err := net.ResolveUDPAddr(protoUDP, hostAddr+":"+udpBandwidthPort)
 	if err != nil {
 		ui.printDbg("Unable to resolve UDP address: %v", err)
 		return err
 	}
-	l, err := net.ListenUDP(protoUDP, udpAddr)
-	if err != nil {
-		ui.printDbg("Error listening on %s for UDP pkt/s tests: %v", udpPpsPort, err)
-		return err
-	}
-	go func(l *net.UDPConn) {
-		defer l.Close()
-		//
-		// We use NumCPU here instead of NumThreads passed from client. The
-		// reason is that for UDP, there is no connection, so all packets come
-		// on same CPU, so it isn't clear if there are any benefits to running
-		// more threads than NumCPU(). TODO: Evaluate this in future.
-		//
-		for i := 0; i < runtime.NumCPU(); i++ {
-			go runUDPBandwidthHandler(test, l)
+	go func() {
+		for i := 0; i < int(test.testParam.NumThreads); i++ {
+			dialer := &net.Dialer{
+				Control: func(network, address string, c syscall.RawConn) error {
+					return c.Control(func(fd uintptr) {
+						// Linux
+						// err := syscall.SetsockoptInt(int(fd), syscall.IPPROTO_IP, syscall.IP_TOS, 128)
+						// Windows
+						err := syscall.SetsockoptInt(syscall.Handle(fd), syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1)
+						if err != nil {
+							ui.printErr("SetsockoptInt failed: %v", err)
+							return
+						}
+					})
+				},
+			}
+			ethrMsg := <-test.rcvdMsgs
+			if ethrMsg.Type != EthrBgn {
+				continue
+			}
+			rudpPort := ethrMsg.Bgn.UDPPort
+			/*
+			   rudpAddr, err := net.ResolveUDPAddr(protoUDP, ":"+rudpPort)
+			   if err != nil {
+			       ui.printDbg("Unable to resolve UDP address: %v", err)
+			       continue
+			   }
+			   conn, err := net.DialUDP(protoUDP, ludpAddr, rudpAddr)
+			*/
+			dialer.LocalAddr = ludpAddr
+			conn, err := dialer.Dial(protoUDP, "["+server+"]:"+rudpPort)
+			if err != nil {
+				ui.printDbg("Unable to dial UDP, error: %v", err)
+				continue
+			}
+			rserver, rport, _ := net.SplitHostPort(conn.RemoteAddr().String())
+			lserver, lport, _ := net.SplitHostPort(conn.LocalAddr().String())
+			ui.printMsg("[udp] local %s port %s connected to %s port %s",
+				lserver, lport, rserver, rport)
+			go runUDPBandwidthHandler(test, conn.(*net.UDPConn), rport)
 		}
 		<-test.done
-	}(l)
+	}()
 	return nil
 }
 
-func runUDPBandwidthHandler(test *ethrTest, conn *net.UDPConn) {
+func runUDPBandwidthHandler(test *ethrTest, conn *net.UDPConn, port string) {
+	defer conn.Close()
 	buffer := make([]byte, test.testParam.BufferSize)
-	n, remoteAddr, err := 0, new(net.UDPAddr), error(nil)
-	for err == nil {
-		n, remoteAddr, err = conn.ReadFromUDP(buffer)
+	for {
+		n, err := conn.Read(buffer)
 		if err != nil {
-			ui.printDbg("Error receiving data from UDP for bandwidth test: %v", err)
-			continue
+			ui.printDbg("Error receiving data over UDP for bandwidth test: %v", err)
+			return
 		}
-		ethrUnused(n)
-		server, port, _ := net.SplitHostPort(remoteAddr.String())
-		test := getTest(server, UDP, Bandwidth)
-		if test != nil {
-			atomic.AddUint64(&test.testResult.data, uint64(n))
-		} else {
-			ui.printDbg("Received unsolicited UDP traffic on port %s from %s port %s", udpPpsPort, server, port)
-		}
+		ui.printDbg("Received %d bytes from %s", n, port)
+		atomic.AddUint64(&test.testResult.data, uint64(n))
 	}
 }
 
