@@ -41,3 +41,4 @@ deploy:
   file: windows/ethr.exe
   on:
     repo: pgmsft/ethr
+    all_branches: true
