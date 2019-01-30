@@ -3,10 +3,10 @@ language: go
 matrix:
   include:
   - go: 1.11.x
-  env: ETHLATEST=true
+    env: ETHLATEST=true
   - go: master
   - os: linux
-  env: ETHLINUX=true
+    env: ETHLINUX=true
   - os: windows
   - os: osx
   allow_failures:
@@ -32,13 +32,13 @@ script:
 - goimports -d $(find . -type f -name '*.go' -not -path "./vendor/*")
 - golint $(go list ./... | grep -v /vendor/)
 - if [ "${ETHLATEST}" = "true" ] && [ "${ETHLINUX}" = "true" ]; then
-    export GOOS=windows
-    export GOARCH=amd64 
-    go build -o windows/ethr.exe
-    export GOOS=linux
-    go build -o linux/ethr
-    export GOOS=darwin
-    go build -o darwin/ethr
+    GOOS=windows && \
+    export GOARCH=amd64 && \
+    go build -o windows/ethr.exe && \
+    export GOOS=linux && \
+    go build -o linux/ethr && \
+    export GOOS=darwin && \
+    go build -o darwin/ethr && \
    fi
 
 before_deploy:
