@@ -9,6 +9,9 @@ if [ "${TRAVIS_OS_NAME}" = "linux" ] && [[ ${TRAVIS_GO_VERSION} == 1.11* ]]; the
     GOOS=linux
     go build -o linux/ethr
     GOOS=darwin
-    go build -o darwin/ethr
+    go build -o osx/ethr
+    zip ethr_windows.zip windows/ethr.exe
+    zip ethr_linux.zip linux/ethr
+    zip ethr_osx.zip osx/ethr
 fi
 

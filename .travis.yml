@@ -35,11 +35,6 @@ script:
 - golint $(go list ./... | grep -v /vendor/)
 - "./travis_build.sh"
 
-before_deploy:
-- zip ethr_windows.zip windows/ethr.exe
-- zip ethr_linux.zip linux/ethr
-- zip ethr_osx.zip osx/ethr
-
 deploy:
   provider: releases
   skip_cleanup: true
