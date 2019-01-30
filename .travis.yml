@@ -32,15 +32,7 @@ script:
 - go vet ./...
 - goimports -d $(find . -type f -name '*.go' -not -path "./vendor/*")
 - golint $(go list ./... | grep -v /vendor/)
-- if [[ "${TRAVIS_OS_NAME}" = "linux" ]] && [[ ${TRAVIS_GO_VERSION} = 1.11* ]]; then
-    export GOOS=windows && \
-    export GOARCH=amd64 && \
-    go build -o windows/ethr.exe && \
-    export GOOS=linux && \
-    go build -o linux/ethr && \
-    export GOOS=darwin && \
-    go build -o darwin/ethr
-   fi
+- "./travis_bld.sh"
 
 before_deploy:
 - zip ethr_windows.zip windows/ethr.exe
