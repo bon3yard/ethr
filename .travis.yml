@@ -20,6 +20,7 @@ before_install:
 - go get -u golang.org/x/tools/cmd/goimports
 - go get -u golang.org/x/lint/golint
 - go get github.com/golang/dep/...
+- chmod +x travis_build.sh
 
 install:
 - "$GOPATH/bin/dep ensure -v"
@@ -32,7 +33,7 @@ script:
 - go vet ./...
 - goimports -d $(find . -type f -name '*.go' -not -path "./vendor/*")
 - golint $(go list ./... | grep -v /vendor/)
-- "./travis_bld.sh"
+- "./travis_build.sh"
 
 before_deploy:
 - zip ethr_windows.zip windows/ethr.exe

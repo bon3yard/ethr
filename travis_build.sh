@@ -2,7 +2,7 @@
 echo $TRAVIS_OS_NAME
 echo "${TRAVIS_OS_NAME}"
 echo "${TRAVIS_GO_VERSION}"
-if [[ "${TRAVIS_OS_NAME}" = "linux" ]] && [[ ${TRAVIS_GO_VERSION} = 1.11* ]]; then
+if [ "${TRAVIS_OS_NAME}" = "linux" ] && [[ ${TRAVIS_GO_VERSION} == 1.11* ]]; then
     GOOS=windows
     GOARCH=amd64
     go build -o windows/ethr.exe
