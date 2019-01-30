@@ -2,12 +2,10 @@ language: go
 
 go:
 - '1.11'
-  env: ETH_LATEST=true
 - master
 
 os:
 - linux
-  env: ETH_LINUX=true
 - windows
 - osx
 
