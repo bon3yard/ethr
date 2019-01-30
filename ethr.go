@@ -192,7 +192,7 @@ func main() {
     // If version is not set via ldflags, then default to UNKNOWN
     //
     if gVersion == "" {
-        gVersion = "[UNKNOWN]"
+        gVersion = "[VERSION: UNKNOWN]"
     }
 	//
 	// Set GOMAXPROCS to 1024 as running large number of goroutines in a loop
