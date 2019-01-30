@@ -38,7 +38,7 @@ script:
     export GOOS=linux && \
     go build -o linux/ethr && \
     export GOOS=darwin && \
-    go build -o darwin/ethr && \
+    go build -o darwin/ethr
    fi
 
 before_deploy:
